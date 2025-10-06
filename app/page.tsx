@@ -3,7 +3,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { RotateCcw, Trophy, Zap, Keyboard } from "lucide-react";
 
-const sampleTexts = [
+type Language = 'english' | 'japanese';
+
+const defaultEnglishTexts = [
   "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once. It has been used for testing typewriters and computer keyboards since the late 19th century. The phrase is also used in font displays and design mockups.",
   "Programming is the art of telling another human what one wants the computer to do. Code is read more often than it is written, so it's important to write clear and maintainable code. Good programmers write code that humans can understand, not just machines.",
   "The beauty of nature never fails to inspire us. From towering mountains to gentle streams, from vast oceans to tiny flowers, every element of nature has its own unique charm. Taking time to appreciate the natural world around us can bring peace and perspective to our busy lives.",
@@ -11,13 +13,23 @@ const sampleTexts = [
   "Technology has transformed the way we live, work, and communicate. The internet connects billions of people across the globe, enabling instant communication and access to information. As we move forward, it's important to use technology wisely and maintain our human connections.",
 ];
 
+const defaultJapaneseTexts = [
+  "はるさんハウスはどこですか。今日はいい天気ですね。日本語のタイピング練習をしています。",
+  "こんにちは、元気ですか。今日はいい天気ですね。プログラミングの勉強をしています。",
+  "日本語のタイピング練習をしています。頑張りましょう。コンピューターの技術は日々進歩しています。",
+  "東京は日本の首都です。多くの人々が住んでいます。新しい技術と伝統が共存している素晴らしい都市です。"
+];
+
 export default function TypingPractice() {
-  const [currentText, setCurrentText] = useState(sampleTexts[0]);
+  const [language, setLanguage] = useState<Language>('english');
+  const [currentText, setCurrentText] = useState(defaultEnglishTexts[0]);
   const [userInput, setUserInput] = useState("");
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
 
@@ -86,11 +98,90 @@ export default function TypingPractice() {
     setAccuracy(100);
   };
 
-  const newText = () => {
-    const randomText =
-      sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+  const fetchEnglishText = async (): Promise<string> => {
+    try {
+      setIsLoading(true);
+      setFetchError(null);
+
+      const response = await fetch('/api/fetch-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: 'https://www.foxnews.com/',
+          language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch English text');
+      }
+
+
+      const data = await response.json();
+      return data.text || getRandomText('english');
+    } catch (error) {
+      setFetchError(`${error} - Failed to fetch new English text. Using default text.`);
+      return getRandomText('english');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchJapaneseText = async (): Promise<string> => {
+    try {
+      setIsLoading(true);
+      setFetchError(null);
+
+      const response = await fetch('/api/fetch-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: 'https://www3.nhk.or.jp/nhkworld/ja/',
+          language: 'japanese'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch Japanese text');
+      }
+
+      const data = await response.json();
+      return data.text || getRandomText('japanese');
+    } catch (error) {
+      setFetchError(`${error} - Failed to fetch new Japanese text. Using default text.`);
+      return getRandomText('japanese');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getRandomText = (lang: Language): string => {
+    const texts = lang === 'english' ? defaultEnglishTexts : defaultJapaneseTexts;
+    return texts[Math.floor(Math.random() * texts.length)];
+  };
+
+  const newText = async () => {
+    let randomText: string;
+
+    if (language === 'english') {
+      randomText = await fetchEnglishText();
+    } else {
+      randomText = await fetchJapaneseText();
+    }
+
     setCurrentText(randomText);
     reset();
+  };
+
+  const switchLanguage = (newLanguage: Language) => {
+    setLanguage(newLanguage);
+    setCurrentText(getRandomText(newLanguage));
+    reset();
+    setFetchError(null);
   };
 
   const getCharClass = (index: number): string => {
@@ -116,9 +207,41 @@ export default function TypingPractice() {
             <Keyboard className="w-12 h-12 text-primary" />
             <h1 className="text-5xl font-bold text-primary">Typing Master</h1>
           </div>
-          <p className="text-base-content text-lg opacity-70">
-            English Typing Practice - Improve Speed and Accuracy
+          <p className="text-base-content text-lg opacity-70 mb-4">
+            {language === 'english'
+              ? 'English Typing Practice - Improve Speed and Accuracy'
+              : 'Japanese Typing Practice - 日本語タイピング練習'}
           </p>
+
+          {/* Language Selection */}
+          <div className="flex justify-center gap-4 mb-4">
+            <button
+              onClick={() => switchLanguage('english')}
+              className={`btn gap-2 ${language === 'english' ? 'btn-primary' : 'btn-outline btn-primary'}`}
+              disabled={isLoading}
+            >
+              <span className="text-lg">🇺🇸</span>
+              English
+            </button>
+            <button
+              onClick={() => switchLanguage('japanese')}
+              className={`btn gap-2 ${language === 'japanese' ? 'btn-primary' : 'btn-outline btn-primary'}`}
+              disabled={isLoading}
+            >
+              <span className="text-lg">🇯🇵</span>
+              日本語
+            </button>
+          </div>
+
+          {/* Error Alert */}
+          {fetchError && (
+            <div className="alert alert-warning max-w-md mx-auto mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span className="text-sm">{fetchError}</span>
+            </div>
+          )}
         </div>
 
         {/* Stats Bar */}
@@ -182,7 +305,7 @@ export default function TypingPractice() {
               ref={textContainerRef}
               className="text-2xl leading-relaxed font-mono mb-6 max-h-96 overflow-y-auto p-4 rounded-lg bg-base-200"
             >
-              {currentText.split("").map((char, index) => (
+              {currentText.split("").map((char: string, index: number) => (
                 <span
                   key={index}
                   ref={index === userInput.length ? activeCharRef : null}
@@ -234,13 +357,25 @@ export default function TypingPractice() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-4 justify-center mb-6">
-          <button onClick={reset} className="btn btn-primary btn-lg gap-2">
+          <button
+            onClick={reset}
+            className="btn btn-primary btn-lg gap-2"
+            disabled={isLoading}
+          >
             <RotateCcw size={20} />
             Reset
           </button>
-          <button onClick={newText} className="btn btn-secondary btn-lg gap-2">
-            <Zap size={20} />
-            New Text
+          <button
+            onClick={newText}
+            className={`btn btn-secondary btn-lg gap-2 ${isLoading ? 'loading' : ''}`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="loading loading-spinner loading-sm"></span>
+            ) : (
+              <Zap size={20} />
+            )}
+            {isLoading ? 'Fetching...' : `New ${language === 'english' ? 'English' : 'Japanese'} Text`}
           </button>
         </div>
 
