@@ -424,6 +424,19 @@ export default function TypingPractice() {
             </ul>
           </div>
         </div> */}
+
+        {/* Copyright Footer */}
+        <footer className="text-center py-6 mt-8 border-t border-base-300">
+          <p className="text-base-content text-sm opacity-60">
+            © {new Date().getFullYear()} Typing Master. Created by{" "}
+            <a
+              href="mailto:hungnm.pnv@gmail.com"
+              className="link link-primary hover:link-secondary transition-colors"
+            >
+              hungnm.pnv@gmail.com
+            </a>
+          </p>
+        </footer>
       </div>
 
       {/* Add DaisyUI CDN */}
