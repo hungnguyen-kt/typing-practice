@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { RotateCcw, Trophy, Zap, Keyboard } from "lucide-react";
+import { RotateCcw, Trophy, Zap, Keyboard, Sun, Moon } from "lucide-react";
 
 type Language = 'english' | 'japanese';
 
@@ -22,6 +22,7 @@ const defaultJapaneseTexts = [
 
 export default function TypingPractice() {
   const [language, setLanguage] = useState<Language>('english');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [currentText, setCurrentText] = useState(defaultEnglishTexts[0]);
   const [userInput, setUserInput] = useState("");
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -32,6 +33,21 @@ export default function TypingPractice() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('typing-master-theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const defaultTheme = prefersDark ? 'dark' : 'light';
+      setTheme(defaultTheme);
+      document.documentElement.setAttribute('data-theme', defaultTheme);
+    }
+  }, []);
 
   useEffect(() => {
     if (activeCharRef.current && textContainerRef.current) {
@@ -184,6 +200,13 @@ export default function TypingPractice() {
     setFetchError(null);
   };
 
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('typing-master-theme', newTheme);
+  };
+
   const getCharClass = (index: number): string => {
     if (index >= userInput.length) {
       return index === userInput.length ? "bg-warning bg-opacity-30" : "";
@@ -203,18 +226,32 @@ export default function TypingPractice() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-3 relative">
             <Keyboard className="w-12 h-12 text-primary" />
             <h1 className="text-5xl font-bold text-primary">Typing Master</h1>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="btn btn-outline btn-primary btn-circle absolute right-0 top-0 border-2"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-6 h-6" />
+              ) : (
+                <Sun className="w-6 h-6 text-yellow-400" />
+              )}
+            </button>
           </div>
-          <p className="text-base-content text-lg opacity-70 mb-4">
+
+          <div className="text-base-content text-lg opacity-70 mb-3">
             {language === 'english'
               ? 'English Typing Practice - Improve Speed and Accuracy'
               : 'Japanese Typing Practice - 日本語タイピング練習'}
-          </p>
+          </div>
 
           {/* Language Selection */}
-          <div className="flex justify-center gap-4 mb-4">
+          <div className="flex justify-center gap-4 mb-3">
             <button
               onClick={() => switchLanguage('english')}
               className={`btn gap-2 ${language === 'english' ? 'btn-primary' : 'btn-outline btn-primary'}`}
@@ -303,7 +340,7 @@ export default function TypingPractice() {
           <div className="card-body">
             <div
               ref={textContainerRef}
-              className="text-2xl leading-relaxed font-mono mb-6 max-h-96 overflow-y-auto p-4 rounded-lg bg-base-200"
+              className="text-2xl leading-relaxed font-mono mb-6 max-h-96 overflow-y-auto p-4 rounded-lg bg-base-200 text-base-content"
             >
               {currentText.split("").map((char: string, index: number) => (
                 <span
@@ -375,7 +412,7 @@ export default function TypingPractice() {
             ) : (
               <Zap size={20} />
             )}
-            {isLoading ? 'Fetching...' : `New ${language === 'english' ? 'English' : 'Japanese'} Text`}
+            {isLoading ? 'Fetching...' : `New Text`}
           </button>
         </div>
 
